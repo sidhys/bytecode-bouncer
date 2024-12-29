@@ -37,4 +37,8 @@ std::string stable_hash_hex(std::string_view text) {
   return stable_hash_hex_bytes(data, text.size());
 }
 
+std::string stable_hash_hex(const std::vector<std::uint8_t> &bytes) {
+  return stable_hash_hex_bytes(bytes.data(), bytes.size());
+}
+
 } // namespace bouncer
