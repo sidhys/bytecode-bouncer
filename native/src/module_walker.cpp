@@ -59,9 +59,33 @@ void add_unique_module(std::vector<NativeModule> &modules,
   if (path.empty() || path.front() != '/') {
     return;
   }
+  const auto deleted = path.find(" (deleted)");
+  if (deleted != std::string::npos) {
+    path.erase(deleted);
+  }
   if (seen.insert(path).second) {
     modules.push_back(NativeModule{path, base_address});
   }
+}
+
+std::vector<NativeModule> parse_proc_maps(std::string_view maps_text) {
+  std::vector<NativeModule> modules;
+  std::set<std::string> seen;
+  std::istringstream input{std::string(maps_text)};
+  std::string line;
+
+  while (std::getline(input, line)) {
+    const auto slash = line.find('/');
+    if (slash == std::string::npos) {
+      continue;
+    }
+    const auto dash = line.find('-');
+    const auto base =
+        dash == std::string::npos ? 0 : parse_hex_prefix(line.substr(0, dash));
+    add_unique_module(modules, seen, line.substr(slash), base);
+  }
+
+  return modules;
 }
 
 } // namespace
