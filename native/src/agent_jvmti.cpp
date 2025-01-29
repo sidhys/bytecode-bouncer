@@ -5,6 +5,19 @@
 #if __has_include(<jvmti.h>)
 #include <jvmti.h>
 
+namespace {
+
+std::atomic<unsigned long long> class_file_load_events{0};
+
+void JNICALL on_class_file_load(jvmtiEnv *, JNIEnv *, jclass, jobject,
+                                const char *, jobject, jint,
+                                const unsigned char *, jint *,
+                                unsigned char **) {
+  class_file_load_events.fetch_add(1, std::memory_order_relaxed);
+}
+
+} // namespace
+
 namespace bouncer {
 
 bool jvmti_agent_compiled_with_headers() { return true; }
@@ -27,6 +40,15 @@ extern "C" JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options,
   caps.can_redefine_classes = 1;
   caps.can_retransform_classes = 1;
   jvmti->AddCapabilities(&caps);
+
+  jvmtiEventCallbacks callbacks{};
+  callbacks.ClassFileLoadHook = &on_class_file_load;
+  if (jvmti->SetEventCallbacks(&callbacks, sizeof(callbacks)) !=
+      JVMTI_ERROR_NONE) {
+    return JNI_ERR;
+  }
+  jvmti->SetEventNotificationMode(JVMTI_ENABLE,
+                                  JVMTI_EVENT_CLASS_FILE_LOAD_HOOK, nullptr);
 
   std::cerr << "bytecode-bouncer jvmti agent loaded" << std::endl;
   return JNI_OK;
