@@ -24,4 +24,13 @@ ClassHashTracker::observe(std::string class_name,
   return change;
 }
 
+std::optional<std::string>
+ClassHashTracker::current_hash(const std::string &class_name) const {
+  const auto found = snapshots_.find(class_name);
+  if (found == snapshots_.end()) {
+    return std::nullopt;
+  }
+  return found->second.hash;
+}
+
 } // namespace bouncer
