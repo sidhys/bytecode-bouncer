@@ -7,6 +7,7 @@
 
 #include <iomanip>
 #include <sstream>
+#include <vector>
 
 namespace bouncer {
 namespace {
@@ -62,6 +63,10 @@ std::string stable_hash_hex(std::string_view text) {
 
 std::string stable_hash_hex(const std::vector<std::uint8_t> &bytes) {
   return stable_hash_hex_bytes(bytes.data(), bytes.size());
+}
+
+std::vector<std::uint8_t> bytes_from_text(std::string_view text) {
+  return std::vector<std::uint8_t>(text.begin(), text.end());
 }
 
 } // namespace bouncer
