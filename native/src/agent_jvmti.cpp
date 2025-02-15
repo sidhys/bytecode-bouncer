@@ -8,12 +8,18 @@
 namespace {
 
 std::atomic<unsigned long long> class_file_load_events{0};
+std::atomic<unsigned long long> native_method_bind_events{0};
 
 void JNICALL on_class_file_load(jvmtiEnv *, JNIEnv *, jclass, jobject,
                                 const char *, jobject, jint,
                                 const unsigned char *, jint *,
                                 unsigned char **) {
   class_file_load_events.fetch_add(1, std::memory_order_relaxed);
+}
+
+void JNICALL on_native_method_bind(jvmtiEnv *, JNIEnv *, jthread, jmethodID,
+                                   void *, void **) {
+  native_method_bind_events.fetch_add(1, std::memory_order_relaxed);
 }
 
 } // namespace
@@ -43,12 +49,15 @@ extern "C" JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options,
 
   jvmtiEventCallbacks callbacks{};
   callbacks.ClassFileLoadHook = &on_class_file_load;
+  callbacks.NativeMethodBind = &on_native_method_bind;
   if (jvmti->SetEventCallbacks(&callbacks, sizeof(callbacks)) !=
       JVMTI_ERROR_NONE) {
     return JNI_ERR;
   }
   jvmti->SetEventNotificationMode(JVMTI_ENABLE,
                                   JVMTI_EVENT_CLASS_FILE_LOAD_HOOK, nullptr);
+  jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_NATIVE_METHOD_BIND,
+                                  nullptr);
 
   std::cerr << "bytecode-bouncer jvmti agent loaded" << std::endl;
   return JNI_OK;

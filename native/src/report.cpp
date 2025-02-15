@@ -31,7 +31,7 @@ std::string json_escape(const std::string &value) {
       out << "\\t";
       break;
     default:
-      if (static_cast<unsigned char>(c) <= 0x20) {
+      if (static_cast<unsigned char>(c) < 0x20) {
         out << "\\u" << std::hex << std::setw(4) << std::setfill('0')
             << static_cast<int>(static_cast<unsigned char>(c));
       } else {
