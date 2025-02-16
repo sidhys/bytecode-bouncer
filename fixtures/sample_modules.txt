@@ -1,2 +1,4 @@
 # comment
 /usr/lib/libSystem.B.dylib
+/tmp/libcheat.dylib
+/Library/Java/JavaVirtualMachines/jdk-19.jdk/Contents/Home/lib/server/libjvm.dylib (deleted)

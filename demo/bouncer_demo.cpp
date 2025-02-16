@@ -44,6 +44,24 @@ void print_findings(const std::vector<bouncer::Detection> &findings,
 } // namespace
 
 int main() {
+  const auto modules = bouncer::parse_module_lines(read_fixture());
+  const auto allowlist = bouncer::ModuleAllowlist::defaults();
+  const auto module_findings =
+      bouncer::find_unallowed_modules(modules, allowlist);
+
+  bouncer::ClassHashTracker tracker;
+  tracker.observe("demo/Game", bouncer::bytes_from_text("class-v1"));
+  const auto change =
+      tracker.observe("demo/Game", bouncer::bytes_from_text("class-v2"));
+
   std::cout << "bytecode bouncer demo\n";
+  std::cout << "tracked class hash: "
+            << tracker.current_hash("demo/Game").value_or("<missing>") << '\n';
+  if (change.has_value()) {
+    std::cout << "class change detected for " << change->class_name << '\n';
+  }
+
+  print_findings(module_findings, "native modules");
+
   return 0;
 }
