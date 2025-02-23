@@ -1,9 +1,12 @@
 #pragma once
 
+#include "bouncer/hash.hpp"
+
 #include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <unordered_map>
-#include <optional>
 #include <vector>
 
 namespace bouncer {
@@ -20,6 +23,8 @@ class ClassHashTracker {
 public:
   std::optional<ClassChange> observe(std::string class_name,
                                      const std::vector<std::uint8_t> &bytecode);
+  std::optional<std::string> current_hash(const std::string &class_name) const;
+  std::size_t tracked_count() const;
 
 private:
   struct Snapshot {
