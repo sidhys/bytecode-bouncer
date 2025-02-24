@@ -13,4 +13,6 @@ struct Detection {
   std::string detail;
 };
 
+std::string severity_to_string(Severity severity);
+
 } // namespace bouncer

@@ -55,4 +55,9 @@ std::string sign_payload(std::string_view payload_json,
   return mac_hex(payload_json, secret_key);
 }
 
+bool verify_payload(std::string_view payload_json, std::string_view secret_key,
+                    std::string_view mac) {
+  return sign_payload(payload_json, secret_key) == mac;
+}
+
 } // namespace bouncer
