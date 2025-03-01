@@ -2,6 +2,7 @@
 
 #include <set>
 #include <sstream>
+#include <cstdlib>
 
 namespace bouncer {
 namespace {
@@ -52,6 +53,13 @@ std::string trim(std::string value) {
   return value.substr(start);
 }
 
+std::uintptr_t parse_hex_prefix(const std::string &value) {
+  std::uintptr_t parsed = 0;
+  std::istringstream in(value);
+  in >> std::hex >> parsed;
+  return parsed;
+}
+
 void add_unique_module(std::vector<NativeModule> &modules,
                        std::set<std::string> &seen, std::string path,
                        std::uintptr_t base_address) {
@@ -89,4 +97,34 @@ std::vector<NativeModule> parse_proc_maps(std::string_view maps_text) {
 }
 
 } // namespace
+
+ModuleAllowlist::ModuleAllowlist() = default;
+
+ModuleAllowlist ModuleAllowlist::defaults() {
+  ModuleAllowlist allowlist;
+  allowlist.add_allowed_fragment("/usr/lib/");
+  allowlist.add_allowed_fragment("/System/Library/");
+  allowlist.add_allowed_fragment("/Library/Java/");
+  allowlist.add_allowed_fragment("/Applications/Xcode.app/");
+  allowlist.add_allowed_fragment("libjvm");
+  allowlist.add_allowed_fragment("libjava");
+  allowlist.add_allowed_fragment("libSystem");
+  allowlist.add_allowed_fragment("libc.");
+  allowlist.add_allowed_fragment("libdl.");
+  allowlist.add_allowed_fragment("libpthread");
+  allowlist.add_allowed_fragment("bouncer");
+  return allowlist;
+}
+
+void ModuleAllowlist::add_allowed_fragment(std::string fragment) {
+  allowed_fragments_.push_back(std::move(fragment));
+}
+
+bool ModuleAllowlist::is_allowed(const NativeModule &module) const {
+  return std::any_of(allowed_fragments_.begin(), allowed_fragments_.end(),
+                     [&](const std::string &fragment) {
+                       return fragment_matches_path(module.path, fragment);
+                     });
+}
+
 } // namespace bouncer
