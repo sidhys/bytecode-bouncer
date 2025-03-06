@@ -43,13 +43,39 @@ ClassLoaderRuleModel::ClassLoaderRuleModel() {
   add_allowed_loader("jdk.internal.loader.ClassLoaders$AppClassLoader");
 }
 
+ClassLoaderRuleModel ClassLoaderRuleModel::defaults() {
+  ClassLoaderRuleModel model;
+  model.add_trusted_code_source_prefix("jrt:/");
+  model.add_trusted_code_source_prefix("file:/usr/");
+  model.add_trusted_code_source_prefix("file:/System/");
+  model.add_trusted_code_source_prefix("file:/Library/Java/");
+  model.add_trusted_code_source_prefix("file:/Applications/");
+  return model;
+}
+
 void ClassLoaderRuleModel::add_allowed_loader(std::string loader_name) {
   allowed_loaders_.insert(std::move(loader_name));
+}
+
+void ClassLoaderRuleModel::add_trusted_code_source_prefix(std::string prefix) {
+  trusted_code_source_prefixes_.push_back(std::move(prefix));
 }
 
 bool ClassLoaderRuleModel::is_allowed_loader(
     const std::string &loader_name) const {
   return allowed_loaders_.find(loader_name) != allowed_loaders_.end();
+}
+
+bool ClassLoaderRuleModel::is_trusted_code_source(
+    const std::string &code_source) const {
+  if (code_source.empty()) {
+    return true;
+  }
+  return std::any_of(trusted_code_source_prefixes_.begin(),
+                     trusted_code_source_prefixes_.end(),
+                     [&](const std::string &prefix) {
+                       return starts_with(code_source, prefix);
+                     });
 }
 
 } // namespace bouncer
