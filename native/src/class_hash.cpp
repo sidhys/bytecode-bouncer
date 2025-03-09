@@ -33,4 +33,8 @@ ClassHashTracker::current_hash(const std::string &class_name) const {
   return found->second.hash;
 }
 
+std::size_t ClassHashTracker::tracked_count() const {
+  return snapshots_.size();
+}
+
 } // namespace bouncer
