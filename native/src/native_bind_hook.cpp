@@ -85,4 +85,19 @@ bool NativeBindTracker::is_allowed_module(
                      });
 }
 
+std::optional<Detection>
+NativeBindTracker::observe_bind(const NativeBindEvent &event) const {
+  if (vm_initialized()) {
+    return Detection{Severity::high, "late-native-bind", bind_subject(event),
+                     bind_detail(event)};
+  }
+
+  if (!event.module_path.empty() && !is_allowed_module(event.module_path)) {
+    return Detection{Severity::medium, "untrusted-native-bind",
+                     bind_subject(event), bind_detail(event)};
+  }
+
+  return std::nullopt;
+}
+
 } // namespace bouncer

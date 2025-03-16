@@ -7,7 +7,6 @@
 
 #include <iomanip>
 #include <sstream>
-#include <vector>
 
 namespace bouncer {
 namespace {
