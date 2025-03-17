@@ -43,4 +43,23 @@ std::string json_escape(const std::string &value) {
   return out.str();
 }
 
+std::string report_to_json(const ReportEvent &report) {
+  std::ostringstream out;
+  out << "{\"detail\":\"" << json_escape(report.detail) << "\",\"fields\":{";
+
+  bool first = true;
+  for (const auto &[key, value] : report.fields) {
+    if (!first) {
+      out << ",";
+    }
+    first = false;
+    out << "\"" << json_escape(key) << "\":\"" << json_escape(value) << "\"";
+  }
+
+  out << "},\"kind\":\"" << json_escape(report.kind) << "\",\"severity\":\""
+      << severity_to_string(report.severity) << "\",\"subject\":\""
+      << json_escape(report.subject) << "\"}";
+  return out.str();
+}
+
 } // namespace bouncer
