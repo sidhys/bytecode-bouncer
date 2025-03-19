@@ -60,4 +60,24 @@ bool verify_payload(std::string_view payload_json, std::string_view secret_key,
   return sign_payload(payload_json, secret_key) == mac;
 }
 
+SignedReport sign_report(const ReportEvent &report, const SigningKey &key) {
+  const std::string payload = report_to_json(report);
+  return SignedReport{algorithm, payload, key.key_id,
+                      sign_payload(payload, key.secret_key)};
+}
+
+bool verify_signed_report(const SignedReport &report,
+                          std::string_view secret_key) {
+  return report.algorithm == algorithm &&
+         key_id_from_secret(secret_key) == report.key_id &&
+         verify_payload(report.payload_json, secret_key, report.mac);
+}
+
+std::string signed_report_to_json(const SignedReport &report) {
+  return std::string("{\"algorithm\":\"") + json_escape(report.algorithm) +
+         "\",\"payload\":\"" + json_escape(report.payload_json) +
+         "\",\"key_id\":\"" + json_escape(report.key_id) + "\",\"mac\":\"" +
+         json_escape(report.mac) + "\"}";
+}
+
 } // namespace bouncer
