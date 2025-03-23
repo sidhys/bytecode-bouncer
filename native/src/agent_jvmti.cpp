@@ -1,5 +1,6 @@
 #include "bouncer/agent.hpp"
 
+#include <atomic>
 #include <iostream>
 
 #if __has_include(<jvmti.h>)
@@ -63,6 +64,15 @@ extern "C" JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options,
   return JNI_OK;
 }
 
+extern "C" JNIEXPORT void JNICALL Agent_OnUnload(JavaVM *) {
+  std::cerr << "bytecode-bouncer jvmti agent unloaded"
+            << " class_file_load_events="
+            << class_file_load_events.load(std::memory_order_relaxed)
+            << " native_method_bind_events="
+            << native_method_bind_events.load(std::memory_order_relaxed)
+            << std::endl;
+}
+
 #else
 
 namespace bouncer {
@@ -76,5 +86,7 @@ extern "C" int Agent_OnLoad(void *, char *, void *) {
             << std::endl;
   return -1;
 }
+
+extern "C" void Agent_OnUnload(void *) {}
 
 #endif
