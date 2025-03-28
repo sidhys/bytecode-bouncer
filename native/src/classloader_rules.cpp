@@ -5,6 +5,18 @@
 
 namespace bouncer {
 
+std::string severity_to_string(Severity severity) {
+  switch (severity) {
+  case Severity::low:
+    return "LOW";
+  case Severity::medium:
+    return "MEDIUM";
+  case Severity::high:
+    return "HIGH";
+  }
+  return "LOW";
+}
+
 namespace {
 
 bool starts_with(const std::string &value, const std::string &prefix) {
@@ -76,6 +88,32 @@ bool ClassLoaderRuleModel::is_trusted_code_source(
                      [&](const std::string &prefix) {
                        return starts_with(code_source, prefix);
                      });
+}
+
+std::optional<Detection>
+ClassLoaderRuleModel::evaluate(const ClassLoaderEvent &event) const {
+  bool allowed_chain = is_allowed_loader(event.loader_name);
+  for (const auto &parent : event.parent_chain) {
+    allowed_chain = allowed_chain && is_allowed_loader(parent);
+  }
+
+  const bool trusted_source = is_trusted_code_source(event.code_source);
+  if (allowed_chain && (event.signed_code_source || trusted_source)) {
+    return std::nullopt;
+  }
+
+  if (!event.signed_code_source) {
+    return Detection{Severity::high, "unsigned-classloader", event.class_name,
+                     chain_detail(event)};
+  }
+
+  if (!allowed_chain) {
+    return Detection{Severity::medium, "custom-classloader", event.class_name,
+                     chain_detail(event)};
+  }
+
+  return Detection{Severity::medium, "untrusted-class-source", event.class_name,
+                   chain_detail(event)};
 }
 
 } // namespace bouncer
