@@ -22,3 +22,66 @@ endif()
 if(UNIX AND NOT APPLE)
     target_link_libraries(bouncer_core PUBLIC dl)
 endif()
+
+target_compile_definitions(bouncer_core
+    PUBLIC
+        BOUNCER_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+)
+
+add_executable(bouncer_tests
+    tests/bouncer_tests.cpp
+)
+
+target_link_libraries(bouncer_tests PRIVATE bouncer_core)
+target_compile_definitions(bouncer_tests PRIVATE
+    BOUNCER_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/fixtures"
+)
+
+add_test(NAME bouncer_tests COMMAND bouncer_tests)
+
+if(BOUNCER_BUILD_DEMO)
+    add_executable(bouncer_demo
+        ../demo/bouncer_demo.cpp
+    )
+    target_link_libraries(bouncer_demo PRIVATE bouncer_core)
+    target_compile_definitions(bouncer_demo PRIVATE
+        BOUNCER_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/fixtures"
+    )
+    add_test(NAME bouncer_demo COMMAND bouncer_demo)
+endif()
+
+if(BOUNCER_BUILD_JVMTI_AGENT)
+    set(bouncer_jdk_home "")
+    if(DEFINED ENV{JAVA_HOME} AND EXISTS "$ENV{JAVA_HOME}")
+        set(bouncer_jdk_home "$ENV{JAVA_HOME}")
+    elseif(EXISTS "/usr/libexec/java_home")
+        execute_process(
+            COMMAND /usr/libexec/java_home
+            OUTPUT_VARIABLE bouncer_jdk_home
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+    endif()
+
+    if(bouncer_jdk_home STREQUAL "")
+        message(WARNING "skipping bouncer_jvmti_agent because no local JDK was found")
+    else()
+        add_library(bouncer_jvmti_agent SHARED
+            src/agent_jvmti.cpp
+        )
+        target_include_directories(bouncer_jvmti_agent PRIVATE
+            "${bouncer_jdk_home}/include"
+        )
+        if(APPLE)
+            target_include_directories(bouncer_jvmti_agent PRIVATE
+                "${bouncer_jdk_home}/include/darwin"
+            )
+        elseif(UNIX)
+            target_include_directories(bouncer_jvmti_agent PRIVATE
+                "${bouncer_jdk_home}/include/linux"
+            )
+        endif()
+        target_link_libraries(bouncer_jvmti_agent PRIVATE bouncer_core)
+        target_compile_features(bouncer_jvmti_agent PRIVATE cxx_std_17)
+    endif()
+endif()
