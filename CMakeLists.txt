@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
+
 project(bytecode_bouncer VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+option(BOUNCER_BUILD_DEMO "Build the synthetic cheat demo runner" ON)
+option(BOUNCER_BUILD_JVMTI_AGENT "Build the JVMTI shared library when a local JDK is available" ON)
 
-add_compile_options(-Wall -Wextra -Wpedantic)
+enable_testing()
 
-find_package(Threads REQUIRED)
+add_subdirectory(native)
