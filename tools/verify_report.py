@@ -16,10 +16,16 @@ def mac_hex(secret: str, payload_json: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="verify a bouncer signed report")
     parser.add_argument("report", help="path to the signed report json")
-    parser.add_argument(
-        "--secret", required=True, help="shared secret used to sign the report"
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--secret", help="shared secret used to sign the report")
+    group.add_argument(
+        "--seed", help="key seed, derived into a secret the same way the agent does"
     )
     args = parser.parse_args()
+
+    secret = args.secret
+    if secret is None:
+        secret = hashlib.sha256(("secret|" + args.seed).encode("utf-8")).hexdigest()
 
     with open(args.report, "r", encoding="utf-8") as handle:
         report = json.load(handle)
@@ -32,14 +38,14 @@ def main() -> int:
     key_id = report.get("key_id", "")
     signature = report.get("mac", "")
     expected_key_id = hashlib.sha256(
-        ("key-id|" + args.secret).encode("utf-8")
+        ("key-id|" + secret).encode("utf-8")
     ).hexdigest()
 
     if key_id != expected_key_id:
         print("key id mismatch", file=sys.stderr)
         return 1
 
-    if not hmac.compare_digest(signature, mac_hex(args.secret, payload)):
+    if not hmac.compare_digest(signature, mac_hex(secret, payload)):
         print("mac mismatch", file=sys.stderr)
         return 1
 

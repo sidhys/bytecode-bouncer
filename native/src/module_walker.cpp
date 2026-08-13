@@ -1,7 +1,5 @@
 #include "bouncer/module_walker.hpp"
 
-#include <algorithm>
-#include <cctype>
 #include <cstdlib>
 #include <set>
 #include <sstream>
@@ -14,39 +12,6 @@
 
 namespace bouncer {
 namespace {
-
-std::string basename(const std::string &path) {
-  const auto slash = path.find_last_of('/');
-  if (slash == std::string::npos) {
-    return path;
-  }
-  return path.substr(slash + 1);
-}
-
-bool fragment_matches_path(const std::string &path,
-                           const std::string &fragment) {
-  if (fragment.empty()) {
-    return false;
-  }
-  if (fragment.find('/') != std::string::npos) {
-    return path.compare(0, fragment.size(), fragment) == 0;
-  }
-
-  const std::string base = basename(path);
-  if (base == fragment) {
-    return true;
-  }
-  if (base.rfind(fragment, 0) != 0) {
-    return false;
-  }
-  if (base.size() == fragment.size()) {
-    return true;
-  }
-
-  const char next = base[fragment.size()];
-  return next == '.' || next == '-' || next == '_' ||
-         std::isdigit(static_cast<unsigned char>(next)) != 0;
-}
 
 std::string trim(std::string value) {
   while (!value.empty() && (value.back() == '\n' || value.back() == '\r' ||
@@ -98,35 +63,6 @@ int collect_module(struct dl_phdr_info *info, std::size_t, void *data) {
 #endif
 
 } // namespace
-
-ModuleAllowlist::ModuleAllowlist() = default;
-
-ModuleAllowlist ModuleAllowlist::defaults() {
-  ModuleAllowlist allowlist;
-  allowlist.add_allowed_fragment("/usr/lib/");
-  allowlist.add_allowed_fragment("/System/Library/");
-  allowlist.add_allowed_fragment("/Library/Java/");
-  allowlist.add_allowed_fragment("/Applications/Xcode.app/");
-  allowlist.add_allowed_fragment("libjvm");
-  allowlist.add_allowed_fragment("libjava");
-  allowlist.add_allowed_fragment("libSystem");
-  allowlist.add_allowed_fragment("libc.");
-  allowlist.add_allowed_fragment("libdl.");
-  allowlist.add_allowed_fragment("libpthread");
-  allowlist.add_allowed_fragment("bouncer");
-  return allowlist;
-}
-
-void ModuleAllowlist::add_allowed_fragment(std::string fragment) {
-  allowed_fragments_.push_back(std::move(fragment));
-}
-
-bool ModuleAllowlist::is_allowed(const NativeModule &module) const {
-  return std::any_of(allowed_fragments_.begin(), allowed_fragments_.end(),
-                     [&](const std::string &fragment) {
-                       return fragment_matches_path(module.path, fragment);
-                     });
-}
 
 std::vector<NativeModule> parse_proc_maps(std::string_view maps_text) {
   std::vector<NativeModule> modules;
@@ -183,20 +119,6 @@ std::vector<NativeModule> walk_loaded_modules() {
 #endif
 
   return modules;
-}
-
-std::vector<Detection>
-find_unallowed_modules(const std::vector<NativeModule> &modules,
-                       const ModuleAllowlist &allowlist) {
-  std::vector<Detection> findings;
-  for (const auto &module : modules) {
-    if (!allowlist.is_allowed(module)) {
-      findings.push_back(Detection{Severity::high, "unknown-native-module",
-                                   module.path,
-                                   "module was not present in the allowlist"});
-    }
-  }
-  return findings;
 }
 
 std::vector<Detection> find_preload_environment(

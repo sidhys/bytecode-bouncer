@@ -26,6 +26,7 @@ bool verify_payload(std::string_view payload_json, std::string_view secret_key,
                     std::string_view mac);
 
 SignedReport sign_report(const ReportEvent &report, const SigningKey &key);
+SignedReport sign_json_payload(std::string payload_json, const SigningKey &key);
 bool verify_signed_report(const SignedReport &report,
                           std::string_view secret_key);
 std::string signed_report_to_json(const SignedReport &report);

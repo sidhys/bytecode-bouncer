@@ -1,11 +1,11 @@
 #pragma once
 
 #include "bouncer/finding.hpp"
+#include "bouncer/module_trust.hpp"
 
-#include <atomic>
 #include <optional>
+#include <set>
 #include <string>
-#include <vector>
 
 namespace bouncer {
 
@@ -19,19 +19,13 @@ struct NativeBindEvent {
 
 class NativeBindTracker {
 public:
-  NativeBindTracker();
+  explicit NativeBindTracker(ModuleTrustPolicy &policy);
 
-  void mark_vm_initialized();
-  void mark_vm_dead();
-  void add_allowed_module_fragment(std::string fragment);
-
-  bool vm_initialized() const;
-  bool is_allowed_module(const std::string &module_path) const;
-  std::optional<Detection> observe_bind(const NativeBindEvent &event) const;
+  std::optional<Detection> observe_bind(const NativeBindEvent &event);
 
 private:
-  std::atomic<bool> vm_initialized_{false};
-  std::vector<std::string> allowed_module_fragments_;
+  ModuleTrustPolicy &policy_;
+  std::set<std::string> unresolved_reported_;
 };
 
 } // namespace bouncer

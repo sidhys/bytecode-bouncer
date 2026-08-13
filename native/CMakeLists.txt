@@ -2,6 +2,7 @@ add_library(bouncer_core STATIC
     src/class_hash.cpp
     src/classloader_rules.cpp
     src/hash.cpp
+    src/module_trust.cpp
     src/module_walker.cpp
     src/native_bind_hook.cpp
     src/report.cpp
@@ -83,5 +84,12 @@ if(BOUNCER_BUILD_JVMTI_AGENT)
         endif()
         target_link_libraries(bouncer_jvmti_agent PRIVATE bouncer_core)
         target_compile_features(bouncer_jvmti_agent PRIVATE cxx_std_17)
+
+        # tiny do-nothing library the live demo injects from an untrusted
+        # directory so the shutdown sweep has something real to flag
+        add_library(bouncer_fake_cheat SHARED
+            ../demo/fake_cheat_agent.cpp
+        )
+        target_compile_features(bouncer_fake_cheat PRIVATE cxx_std_17)
     endif()
 endif()

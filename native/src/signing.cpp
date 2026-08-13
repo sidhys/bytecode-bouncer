@@ -2,11 +2,6 @@
 
 #include "bouncer/hash.hpp"
 
-#if defined(__APPLE__) && __has_include(<CommonCrypto/CommonHMAC.h>)
-#include <CommonCrypto/CommonHMAC.h>
-#define BOUNCER_HAS_COMMONCRYPTO 1
-#endif
-
 namespace bouncer {
 namespace {
 
@@ -14,31 +9,6 @@ constexpr const char *algorithm = "bb-hmac-sha256-v1";
 
 std::string key_id_from_secret(std::string_view secret_key) {
   return stable_hash_hex(std::string("key-id|") + std::string(secret_key));
-}
-
-std::string mac_hex(std::string_view payload_json,
-                    std::string_view secret_key) {
-#if defined(BOUNCER_HAS_COMMONCRYPTO)
-  auto hex_encode = [](const unsigned char *bytes, std::size_t size) {
-    static constexpr char digits[] = "0123456789abcdef";
-    std::string out;
-    out.reserve(size * 2);
-    for (std::size_t i = 0; i < size; ++i) {
-      const unsigned char byte = bytes[i];
-      out.push_back(digits[byte >> 4]);
-      out.push_back(digits[byte & 0x0f]);
-    }
-    return out;
-  };
-
-  unsigned char digest[CC_SHA256_DIGEST_LENGTH];
-  CCHmac(kCCHmacAlgSHA256, secret_key.data(), secret_key.size(),
-         payload_json.data(), payload_json.size(), digest);
-  return hex_encode(digest, CC_SHA256_DIGEST_LENGTH);
-#else
-  return stable_hash_hex(std::string(secret_key) + "|" +
-                         std::string(payload_json));
-#endif
 }
 
 } // namespace
@@ -52,18 +22,23 @@ SigningKey make_local_key(std::string_view seed) {
 
 std::string sign_payload(std::string_view payload_json,
                          std::string_view secret_key) {
-  return mac_hex(payload_json, secret_key);
+  return hmac_sha256_hex(secret_key, payload_json);
 }
 
 bool verify_payload(std::string_view payload_json, std::string_view secret_key,
                     std::string_view mac) {
-  return sign_payload(payload_json, secret_key) == mac;
+  return constant_time_equals(sign_payload(payload_json, secret_key), mac);
 }
 
 SignedReport sign_report(const ReportEvent &report, const SigningKey &key) {
-  const std::string payload = report_to_json(report);
-  return SignedReport{algorithm, payload, key.key_id,
-                      sign_payload(payload, key.secret_key)};
+  return sign_json_payload(report_to_json(report), key);
+}
+
+SignedReport sign_json_payload(std::string payload_json,
+                               const SigningKey &key) {
+  std::string mac = sign_payload(payload_json, key.secret_key);
+  return SignedReport{algorithm, std::move(payload_json), key.key_id,
+                      std::move(mac)};
 }
 
 bool verify_signed_report(const SignedReport &report,
